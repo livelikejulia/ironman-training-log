@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ironman 70.3 Kona — Training Log</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FAFAF8;
+    --bg-card: #FFFFFF;
+    --bg-surface: #F4F2ED;
+    --border: rgba(0,0,0,0.10);
+    --border-strong: rgba(0,0,0,0.18);
+    --text: #1A1A18;
+    --text-muted: #6B6B65;
+    --text-faint: #9E9E97;
+    --swim: #378ADD; --swim-bg: #E6F1FB; --swim-text: #0C447C;
+    --bike: #EF9F27; --bike-bg: #FAEEDA; --bike-text: #633806;
+    --run: #639922;  --run-bg:  #EAF3DE; --run-text:  #27500A;
+    --lift: #D4537E; --lift-bg: #FBEAF0; --lift-text: #72243E;
+    --brick: #7F77DD; --brick-bg: #EEEDFE; --brick-text: #3C3489;
+    --rest: #888780; --rest-bg: #F1EFE8; --rest-text: #444441;
+    --done-bg: #EAF3DE; --done-border: #97C459;
+    --skip-bg: #FAEEDA; --skip-border: #EF9F27;
+    --fail-bg: #FCEBEB; --fail-border: #F09595;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #18181A; --bg-card: #222225; --bg-surface: #2A2A2D;
+      --border: rgba(255,255,255,0.10); --border-strong: rgba(255,255,255,0.18);
+      --text: #F0EFE8; --text-muted: #A8A8A0; --text-faint: #666660;
+      --swim-bg: #0C447C; --swim-text: #B5D4F4;
+      --bike-bg: #633806; --bike-text: #FAC775;
+      --run-bg: #27500A; --run-text: #C0DD97;
+      --lift-bg: #72243E; --lift-text: #F4C0D1;
+      --brick-bg: #3C3489; --brick-text: #CECBF6;
+      --rest-bg: #444441; --rest-text: #D3D1C7;
+      --done-bg: #1a2e0a; --done-border: #3B6D11;
+      --skip-bg: #2e1f00; --skip-border: #854F0B;
+      --fail-bg: #2e0a0a; --fail-border: #A32D2D;
+    }
+  }
+
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+
+  header { padding: 2rem 1.5rem 1.25rem; border-bottom: 0.5px solid var(--border); }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .header-meta { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.25rem; }
+  .stat { background: var(--bg-surface); border-radius: var(--radius-sm); padding: 10px 14px; min-width: 90px; }
+  .stat-val { font-size: 22px; font-weight: 600; }
+  .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }
+  .stat-val.done { color: #3B6D11; }
+  .stat-val.skip { color: #854F0B; }
+  .stat-val.fail { color: #A32D2D; }
+
+  nav { display: flex; gap: 6px; padding: 1rem 1.5rem; flex-wrap: wrap; border-bottom: 0.5px solid var(--border); background: var(--bg-card); position: sticky; top: 0; z-index: 10; }
+  .phase-btn { padding: 6px 14px; border-radius: 20px; border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-muted); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .phase-btn:hover { background: var(--bg-surface); }
+  .phase-btn.active { background: var(--brick-bg); border-color: var(--brick); color: var(--brick-text); font-weight: 500; }
+
+  main { padding: 1.5rem; max-width: 860px; }
+
+  .phase-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .phase-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+  .week-card { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .week-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; user-select: none; gap: 12px; }
+  .week-header:hover { background: var(--bg-surface); }
+  .week-left { display: flex; align-items: center; gap: 12px; }
+  .week-num { font-size: 12px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; min-width: 52px; }
+  .week-label { font-size: 15px; font-weight: 500; }
+  .week-dates { font-size: 12px; color: var(--text-muted); }
+  .week-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+  .week-status { display: flex; align-items: center; gap: 8px; }
+  .progress-ring { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
+  .chevron { font-size: 14px; color: var(--text-faint); transition: transform 0.2s; }
+  .week-card.open .chevron { transform: rotate(180deg); }
+
+  .week-body { display: none; border-top: 0.5px solid var(--border); }
+  .week-card.open .week-body { display: block; }
+
+  .day-row { display: grid; grid-template-columns: 72px 1fr; border-bottom: 0.5px solid var(--border); }
+  .day-row:last-child { border-bottom: none; }
+  .day-label { padding: 14px 12px; font-size: 12px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; display: flex; flex-direction: column; justify-content: flex-start; gap: 4px; border-right: 0.5px solid var(--border); }
+  .day-content { padding: 12px 14px; }
+  .session-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .session-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+
+  .pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; display: inline-block; }
+  .pill-swim  { background: var(--swim-bg);  color: var(--swim-text); }
+  .pill-bike  { background: var(--bike-bg);  color: var(--bike-text); }
+  .pill-run   { background: var(--run-bg);   color: var(--run-text); }
+  .pill-lift  { background: var(--lift-bg);  color: var(--lift-text); }
+  .pill-brick { background: var(--brick-bg); color: var(--brick-text); }
+  .pill-rest  { background: var(--rest-bg);  color: var(--rest-text); }
+
+  .status-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .status-btn { padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; transition: all 0.12s; }
+  .status-btn:hover { background: var(--bg-surface); }
+  .status-btn.sel-done { background: var(--done-bg); border-color: var(--done-border); color: #27500A; font-weight: 500; }
+  .status-btn.sel-skipped { background: var(--skip-bg); border-color: var(--skip-border); color: #633806; font-weight: 500; }
+  .status-btn.sel-failed { background: var(--fail-bg); border-color: var(--fail-border); color: #791F1F; font-weight: 500; }
+  .status-btn.sel-planned { background: var(--brick-bg); border-color: var(--brick); color: var(--brick-text); font-weight: 500; }
+
+  .note-input { width: 100%; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); resize: vertical; min-height: 60px; transition: border-color 0.15s; }
+  .note-input:focus { outline: none; border-color: var(--swim); box-shadow: 0 0 0 2px rgba(55,138,221,0.12); }
+  .note-input::placeholder { color: var(--text-faint); }
+
+  .save-btn { margin-top: 7px; padding: 6px 14px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg-surface); color: var(--text); font-size: 12px; cursor: pointer; transition: all 0.12s; }
+  .save-btn:hover { background: var(--border); }
+  .save-btn:active { transform: scale(0.97); }
+  .saved-flash { font-size: 12px; color: #3B6D11; margin-left: 8px; opacity: 0; transition: opacity 0.3s; }
+
+  .metrics-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .metric-field { display: flex; flex-direction: column; gap: 3px; }
+  .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-input { width: 120px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); transition: border-color 0.15s; }
+  .metric-input:focus { outline: none; border-color: var(--swim); box-shadow: 0 0 0 2px rgba(55,138,221,0.12); }
+  .metric-input::placeholder { color: var(--text-faint); }
+  .metric-unit { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+  .day-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); display: inline-block; }
+  .dot-done    { background: #639922; }
+  .dot-skipped { background: #EF9F27; }
+  .dot-failed  { background: #E24B4A; }
+
+  .week-progress-dots { display: flex; gap: 3px; }
+
+  footer { padding: 2rem 1.5rem; font-size: 12px; color: var(--text-faint); border-top: 0.5px solid var(--border); }
+
+  @media (max-width: 600px) {
+    header, nav, main { padding-left: 1rem; padding-right: 1rem; }
+    .day-row { grid-template-columns: 52px 1fr; }
+    .stats-row .stat { min-width: 70px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <h1>Ironman 70.3 Kona</h1>
+      <div class="header-meta">Race day: May 2027 · Kailua-Kona, Big Island · 12-month training log</div>
+    </div>
+    <div style="font-size: 13px; color: var(--text-muted); text-align: right;">
+      <div id="days-to-race" style="font-size: 22px; font-weight: 600; color: var(--text);"></div>
+      <div>days to race</div>
+    </div>
+  </div>
+  <div class="stats-row" id="global-stats">
+    <div class="stat"><div class="stat-val done" id="st-done">0</div><div class="stat-label">Completed</div></div>
+    <div class="stat"><div class="stat-val skip" id="st-skip">0</div><div class="stat-label">Skipped</div></div>
+    <div class="stat"><div class="stat-val fail" id="st-fail">0</div><div class="stat-label">Struggled</div></div>
+    <div class="stat"><div class="stat-val" id="st-pct" style="color:var(--swim)">0%</div><div class="stat-label">Completion rate</div></div>
+    <div class="stat"><div class="stat-val" id="st-streak">0</div><div class="stat-label">Week streak</div></div>
+    <div class="stat"><div class="stat-val" id="st-hours" style="color:var(--bike-text)">0h</div><div class="stat-label">Total time</div></div>
+    <div class="stat"><div class="stat-val" id="st-cals" style="color:var(--run-text)">0</div><div class="stat-label">Total kcal</div></div>
+  </div>
+</header>
+
+<nav id="phase-nav"></nav>
+<main id="main-content"></main>
+
+<footer>All data is saved to your browser's local storage. Nothing is sent anywhere. Clear browser data to reset.</footer>
+
+<script>
+const RACE_DATE = new Date(2027, 4, 15);
+const START_DATE = new Date(2026, 5, 11);
+
+const PHASES = [
+  {
+    id: 'base', label: 'Phase 1: Base', period: 'Jun–Aug 2026',
+    sub: '12 weeks · Aerobic foundation, bike form, maintain swim, build strength',
+    weeks: [
+      { label: 'Aerobic introduction', focus: 'Easy efforts only — build the habit' },
+      { label: 'Building cadence', focus: 'Bike cadence 85–95 rpm, zone 2 heart rate' },
+      { label: 'Swim technique', focus: 'Drills: fingertip drag, catch-up, high elbow' },
+      { label: 'Lift heavy', focus: 'Squats + deadlifts — max strength window' },
+      { label: 'Longer rides', focus: 'Push Saturday bike to 75 min' },
+      { label: 'Run consistency', focus: 'Easy pace, no watch pressure' },
+      { label: 'Recovery week', focus: 'Drop volume 30%, sleep priority' },
+      { label: 'Increase long ride', focus: 'First 90-min outdoor ride' },
+      { label: 'Run form', focus: 'Cadence 170+, land under hips' },
+      { label: 'Combined fatigue', focus: 'Notice how swim affects run' },
+      { label: 'Strength peak', focus: 'Last heavy lift week before volume rises' },
+      { label: 'Base deload', focus: 'Cut volume 40%, prep for Build I' },
+    ],
+    days: baseDays
+  },
+  {
+    id: 'build1', label: 'Phase 2: Build I', period: 'Sep–Oct 2026',
+    sub: '8 weeks · Brick sessions, increase bike mileage, 3× swim',
+    weeks: [
+      { label: 'First brick', focus: 'Bike → run transition — legs will feel heavy, that\'s the point' },
+      { label: 'Tempo intervals', focus: '2×15 min at zone 3 on bike' },
+      { label: 'OWS introduction', focus: 'First ocean swim — Ala Moana or Kailua' },
+      { label: 'Strength shift', focus: 'Move to strength-endurance: 3×12, less rest' },
+      { label: 'Brick build', focus: 'Extend post-brick run to 25 min' },
+      { label: 'Run threshold', focus: '20-min tempo run, controlled effort' },
+      { label: 'Recovery week', focus: 'Reduce volume 30%, sleep priority' },
+      { label: 'Build I finale', focus: 'Longest brick so far: 90 min + 20 min run' },
+    ],
+    days: build1Days
+  },
+  {
+    id: 'build2', label: 'Phase 3: Build II', period: 'Nov 2026–Jan 2027',
+    sub: '12 weeks · Race-specific intensity, longer bricks, open water',
+    weeks: [
+      { label: 'Intensity introduction', focus: 'First 3×20 min bike intervals — hard but controlled' },
+      { label: 'OWS sighting', focus: 'Practice sighting every 10 strokes in ocean' },
+      { label: 'Long run build', focus: 'Push Sunday run to 70 min' },
+      { label: 'Bike endurance', focus: 'First 2-hour ride — fuel every 20 min' },
+      { label: 'Race pace swim', focus: '6×250m at 70.3 goal pace' },
+      { label: 'Tempo run progression', focus: '25 min continuous at threshold' },
+      { label: 'Recovery week', focus: 'Reduce volume 30%, prioritize sleep' },
+      { label: 'Long brick', focus: '2.5 hr bike → 35 min run, practice nutrition' },
+      { label: 'OWS confidence', focus: 'Swim in chop — go early morning at Kailua' },
+      { label: 'Run long build', focus: 'Sunday run 80 min, conversational pace' },
+      { label: 'December peak', focus: 'Hardest week: high volume across all three' },
+      { label: 'New Year deload', focus: 'Easy week, reflect on progress so far' },
+    ],
+    days: build2Days
+  },
+  {
+    id: 'peak', label: 'Phase 4: Peak', period: 'Feb–Apr 2027',
+    sub: '10 weeks · Race simulation, dial in nutrition & transitions',
+    weeks: [
+      { label: 'Race effort bike', focus: '2 hr at zone 3, nutrition every 20 min' },
+      { label: 'Full race swim', focus: '1,900m continuous at race pace' },
+      { label: 'Big brick', focus: '3 hr bike → 40 min run, full race nutrition' },
+      { label: 'Race pace runs', focus: '4×1 mile at 10k goal pace' },
+      { label: 'Mock race simulation', focus: 'Full 70.3 simulation — treat like race day' },
+      { label: 'Recovery week', focus: 'Post-mock rest: 40% volume, eat and sleep' },
+      { label: 'Heat training', focus: 'Midday outdoor rides — Kona prep' },
+      { label: 'Transition practice', focus: 'Time T1 and T2 — every second counts' },
+      { label: 'Confidence week', focus: 'Everything feels dialed — stay conservative' },
+      { label: 'Pre-taper prep', focus: 'Last high-volume week, end on a high note' },
+    ],
+    days: peakDays
+  },
+  {
+    id: 'taper', label: 'Phase 5: Taper', period: 'May 2027',
+    sub: '3 weeks · Trust the training, arrive sharp and rested',
+    weeks: [
+      { label: 'Taper week 1', focus: 'Cut volume 40%, keep short sharp efforts' },
+      { label: 'Taper week 2', focus: 'Cut volume 60%, feel antsy — that\'s good' },
+      { label: 'Race week', focus: 'Easy swim + short bike + shakeout run only' },
+    ],
+    days: taperDays
+  }
+];
+
+function baseDays(weekIndex) {
+  if (weekIndex === 0) {
+    return [
+      { day: 'Thu', type: 'lift',  title: 'Lower body lift', desc: 'Squats 4×5, Romanian deadlifts 3×8, hip thrusters 3×12, calf raises' },
+      { day: 'Fri', type: 'rest',  title: 'Rest & mobility', desc: 'Yoga, foam roll, hip flexors. Sleep 8+ hours.' },
+      { day: 'Sat', type: 'bike',  title: 'Long ride', desc: '75 min outdoor. Tantalus or H3 corridor. Zone 2, focus on smooth pedal stroke.' },
+      { day: 'Sun', type: 'run',   title: 'Long run', desc: '40 min easy. Build by 10% each non-recovery week.' },
+    ];
+  }
+  return [
+    { day: 'Mon', type: 'lift',  title: 'Lower body lift', desc: 'Squats 4×5, Romanian deadlifts 3×8, hip thrusters 3×12, calf raises' },
+    { day: 'Tue', type: 'bike',  title: 'Easy spin', desc: '60 min, zone 2, cadence 85–95 rpm. Flat road or trainer. No heroics.' },
+    { day: 'Wed', type: 'swim',  title: 'Technique swim', desc: '2,000m — 400m warm-up, 8×100m drills (fingertip drag, catch-up), 400m cool-down' },
+    { day: 'Wed', type: 'run',   title: 'Easy run', desc: '30 min, zone 2, conversational pace. Avoid hills for now.' },
+    { day: 'Thu', type: 'lift',  title: 'Upper body lift', desc: 'Lat pulldowns 3×10, DB rows 3×10, shoulder press 3×10, plank 3×45 sec' },
+    { day: 'Fri', type: 'rest',  title: 'Rest & mobility', desc: 'Yoga, foam roll, hip flexors. Sleep 8+ hours.' },
+    { day: 'Sat', type: 'bike',  title: 'Long ride', desc: '75 min outdoor. Tantalus or H3 corridor. Zone 2, focus on smooth pedal stroke.' },
+    { day: 'Sun', type: 'run',   title: 'Long run', desc: '40 min easy. Build by 10% each non-recovery week.' },
+  ];
+}
+
+function build1Days(wi) {
+  return [
+    { day: 'Mon', type: 'lift',  title: 'Full body circuit', desc: '3×12: goblet squat, DB row, step-ups, push press, dead bugs. 45 sec rest.' },
+    { day: 'Tue', type: 'bike',  title: 'Tempo bike', desc: '75 min: 15 warm-up + 2×15 min zone 3 + 15 cool-down. Steady, not sprinting.' },
+    { day: 'Wed', type: 'swim',  title: 'Threshold swim', desc: '2,500m: warm-up + 4×200m at threshold + 6×50m fast + cool-down' },
+    { day: 'Wed', type: 'run',   title: 'Run + strides', desc: '35 min easy + 4×30 sec strides. Strides = fast but relaxed, walk back to start.' },
+    { day: 'Thu', type: 'swim',  title: 'Easy swim', desc: '2,000m easy pull buoy. Focus on long stroke, not speed.' },
+    { day: 'Fri', type: 'lift',  title: 'Upper + core', desc: 'Rows 3×12, bench 3×10, Pallof press 3×12 each side, Copenhagen planks' },
+    { day: 'Sat', type: 'brick', title: 'Brick session', desc: '90 min bike → 20 min run. Rack the bike, change shoes fast, get running even if legs feel awful.' },
+    { day: 'Sun', type: 'run',   title: 'Long run', desc: '55–65 min easy. Conversational pace. Kailua or Manoa trail for variety.' },
+  ];
+}
+
+function build2Days(wi) {
+  return [
+    { day: 'Mon', type: 'rest',  title: 'Full rest', desc: 'No workout. HRV check, legs up, foam roll.' },
+    { day: 'Tue', type: 'bike',  title: 'Bike intervals', desc: '90 min: warm-up + 3×20 min zone 3–4 + 10 min cool-down. Steady power.' },
+    { day: 'Wed', type: 'swim',  title: 'Race-pace swim', desc: '3,000m: warm-up + 6×250m at goal pace + 4×50m sprint + cool-down' },
+    { day: 'Wed', type: 'lift',  title: 'Maintenance lift', desc: '2×10 full body: deadlift, press, row. Moderate weight, not to failure.' },
+    { day: 'Thu', type: 'run',   title: 'Tempo run', desc: '50 min: 10 warm-up + 25 min at tempo (zone 3–4) + 15 cool-down' },
+    { day: 'Fri', type: 'swim',  title: 'Open water swim', desc: '2,500m at Ala Moana or Kailua. Practice sighting every 10 strokes.' },
+    { day: 'Sat', type: 'brick', title: 'Long brick', desc: '2.5 hr bike → 30–40 min run. Race-sim effort. Fuel every 20 min on bike.' },
+    { day: 'Sun', type: 'run',   title: 'Long run', desc: '70–80 min easy, building to 90 min by January. Flat route, HR-controlled.' },
+  ];
+}
+
+function peakDays(wi) {
+  return [
+    { day: 'Mon', type: 'rest',  title: 'Rest', desc: 'Recovery priority. Legs elevated. Visualize race segments.' },
+    { day: 'Tue', type: 'bike',  title: 'Race pace bike', desc: '2 hr at race effort (zone 3). Practice taking nutrition every 20 min. Simulate Kona heat.' },
+    { day: 'Wed', type: 'swim',  title: 'Continuous race swim', desc: '3,200m including 1,900m continuous at race pace. Wetsuit optional.' },
+    { day: 'Wed', type: 'lift',  title: 'Maintenance lift (Feb–Mar)', desc: '2×8 moderate weight. Stop by April. Deadlift, row, press only.' },
+    { day: 'Thu', type: 'run',   title: 'Race pace run', desc: '55 min: easy warm-up + 4×1 mile at 10k goal pace + cool-down' },
+    { day: 'Fri', type: 'swim',  title: 'Race-sim OWS', desc: 'Ocean swim, race distance, practice T1 exit. Goggles + cap combo rehearsal.' },
+    { day: 'Sat', type: 'brick', title: 'Race simulation brick', desc: '3 hr bike → 45 min run. Full race nutrition plan. Time transitions.' },
+    { day: 'Sun', type: 'run',   title: 'Long run', desc: '85–90 min easy. Practice race-day fueling. Last big run before taper.' },
+  ];
+}
+
+function taperDays(wi) {
+  return [
+    { day: 'Mon', type: 'rest',  title: 'Rest', desc: 'Full rest. You\'ve earned it.' },
+    { day: 'Tue', type: 'bike',  title: 'Short sharp bike', desc: '45 min: easy + 2×5 min at race effort. Stay sharp without loading fatigue.' },
+    { day: 'Wed', type: 'swim',  title: 'Easy swim + pickups', desc: '1,800m easy + 4×50m at race pace. Feel the water, don\'t grind.' },
+    { day: 'Thu', type: 'run',   title: 'Easy run + strides', desc: '30 min easy + 4×30 sec at race pace. Light and quick.' },
+    { day: 'Fri', type: 'rest',  title: 'Rest & gear prep', desc: 'Lay out all gear. Visualize T1 and T2. Sleep 9+ hours.' },
+    { day: 'Sat', type: 'swim',  title: 'Easy swim', desc: '1,200m very easy. Just feel the water. No effort.' },
+    { day: 'Sun', type: 'run',   title: 'Shakeout run', desc: '20 min very easy. Stay off your feet the rest of the day.' },
+  ];
+}
+
+let allData = JSON.parse(localStorage.getItem('im703_log') || '{}');
+
+function saveData() {
+  localStorage.setItem('im703_log', JSON.stringify(allData));
+}
+
+function getKey(phaseId, weekIdx, dayIdx) {
+  return `${phaseId}_w${weekIdx}_d${dayIdx}`;
+}
+
+function getEntry(phaseId, weekIdx, dayIdx) {
+  return allData[getKey(phaseId, weekIdx, dayIdx)] || { status: 'planned', note: '' };
+}
+
+function setEntry(phaseId, weekIdx, dayIdx, data) {
+  allData[getKey(phaseId, weekIdx, dayIdx)] = data;
+  saveData();
+}
+
+function daysToRace() {
+  const now = new Date();
+  const diff = Math.ceil((RACE_DATE - now) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}
+
+function getWeekDates(weekIdx) {
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (weekIdx === 0) {
+    return `${fmt(new Date(2026,5,11))} – ${fmt(new Date(2026,5,14))}`;
+  }
+  const start = new Date(2026,5,15);
+  start.setDate(start.getDate() + (weekIdx - 1) * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+function computeStats() {
+  let done = 0, skip = 0, fail = 0, total = 0;
+  for (const k in allData) {
+    const e = allData[k];
+    if (e.status === 'done') done++;
+    else if (e.status === 'skipped') skip++;
+    else if (e.status === 'failed') fail++;
+    if (e.status !== 'planned') total++;
+  }
+  const pct = total > 0 ? Math.round((done / (done + skip + fail)) * 100) : 0;
+
+  document.getElementById('st-done').textContent = done;
+  document.getElementById('st-skip').textContent = skip;
+  document.getElementById('st-fail').textContent = fail;
+  document.getElementById('st-pct').textContent = pct + '%';
+
+  let streak = 0;
+  const phases = PHASES;
+  let phaseOffset = 0;
+  outer:
+  for (const ph of phases) {
+    for (let w = 0; w < ph.weeks.length; w++) {
+      const days = ph.days(w);
+      let weekDone = true;
+      for (let d = 0; d < days.length; d++) {
+        const e = allData[getKey(ph.id, w, d)];
+        if (!e || e.status === 'planned') { weekDone = false; break outer; }
+        if (e.status !== 'done') weekDone = false;
+      }
+      if (weekDone) streak++;
+    }
+  }
+  document.getElementById('st-streak').textContent = streak;
+
+  let totalMins = 0, totalCals = 0;
+  for (const k in allData) {
+    const e = allData[k];
+    if (e.duration) totalMins += parseInt(e.duration) || 0;
+    if (e.calories) totalCals += parseInt(e.calories) || 0;
+  }
+  const hrs = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  document.getElementById('st-hours').textContent = hrs > 0 ? `${hrs}h ${mins}m` : (totalMins > 0 ? `${mins}m` : '0h');
+  document.getElementById('st-cals').textContent = totalCals > 0 ? totalCals.toLocaleString() : '0';
+}
+
+let currentPhase = 'base';
+
+function renderNav() {
+  const nav = document.getElementById('phase-nav');
+  nav.innerHTML = '';
+  PHASES.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'phase-btn' + (p.id === currentPhase ? ' active' : '');
+    btn.textContent = p.label;
+    btn.onclick = () => { currentPhase = p.id; renderNav(); renderPhase(); };
+    nav.appendChild(btn);
+  });
+}
+
+function typeClass(t) {
+  const map = { swim:'swim', bike:'bike', run:'run', lift:'lift', brick:'brick', rest:'rest' };
+  return 'pill-' + (map[t] || 'rest');
+}
+
+function dotClass(status) {
+  if (status === 'done') return 'dot-done';
+  if (status === 'skipped') return 'dot-skipped';
+  if (status === 'failed') return 'dot-failed';
+  return '';
+}
+
+function renderPhase() {
+  const phase = PHASES.find(p => p.id === currentPhase);
+  const main = document.getElementById('main-content');
+
+  let html = `<div class="phase-title">${phase.label}</div>
+  <div class="phase-sub">${phase.period} · ${phase.sub}</div>`;
+
+  let weekOffset = 0;
+  PHASES.forEach(p => { if (p.id === currentPhase) return; if (PHASES.indexOf(p) < PHASES.indexOf(phase)) weekOffset += p.weeks.length; });
+
+  phase.weeks.forEach((week, wi) => {
+    const globalWi = weekOffset + wi;
+    const weekDates = getWeekDates(globalWi);
+    const weekKey = `week_open_${phase.id}_${wi}`;
+    const isOpen = localStorage.getItem(weekKey) !== 'false';
+    const days = phase.days(wi);
+
+    const dotHTML = days.map((_, di) => {
+      const e = getEntry(phase.id, wi, di);
+      return `<div class="day-status-dot ${dotClass(e.status)}" title="${days[di].day} ${days[di].title}: ${e.status}"></div>`;
+    }).join('');
+
+    html += `<div class="week-card${isOpen ? ' open' : ''}" id="wk-${phase.id}-${wi}">
+      <div class="week-header" onclick="toggleWeek('${phase.id}',${wi})">
+        <div class="week-left">
+          <span class="week-num">Week ${globalWi + 1}</span>
+          <div>
+            <div class="week-label">${week.label}</div>
+            <div class="week-dates">${weekDates} · ${week.focus}</div>
+          </div>
+        </div>
+        <div class="week-status">
+          <div class="week-progress-dots">${dotHTML}</div>
+          <div class="chevron">&#8964;</div>
+        </div>
+      </div>
+      <div class="week-body">`;
+
+    const grouped = {};
+    days.forEach((d, di) => {
+      if (!grouped[d.day]) grouped[d.day] = [];
+      grouped[d.day].push({ ...d, di });
+    });
+
+    const dayOrder = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    dayOrder.forEach(dayName => {
+      if (!grouped[dayName]) return;
+      const sessions = grouped[dayName];
+
+      html += `<div class="day-row">
+        <div class="day-label">${dayName}</div>
+        <div class="day-content">`;
+
+      sessions.forEach(s => {
+        const e = getEntry(phase.id, wi, s.di);
+        const k = `${phase.id}_${wi}_${s.di}`;
+        html += `<div style="margin-bottom: 14px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <span class="pill ${typeClass(s.type)}">${s.type}</span>
+            <span class="session-title">${s.title}</span>
+          </div>
+          <div class="session-desc">${s.desc}</div>
+          <div class="status-row">
+            <button class="status-btn${e.status==='done'?' sel-done':''}" onclick="setStatus('${phase.id}',${wi},${s.di},'done',this)">Done</button>
+            <button class="status-btn${e.status==='skipped'?' sel-skipped':''}" onclick="setStatus('${phase.id}',${wi},${s.di},'skipped',this)">Skipped</button>
+            <button class="status-btn${e.status==='failed'?' sel-failed':''}" onclick="setStatus('${phase.id}',${wi},${s.di},'failed',this)">Struggled</button>
+            <button class="status-btn${e.status==='planned'?' sel-planned':''}" onclick="setStatus('${phase.id}',${wi},${s.di},'planned',this)">Planned</button>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-field">
+              <span class="metric-label">Duration</span>
+              <input class="metric-input" type="number" id="dur-${k}" min="0" max="600" placeholder="e.g. 75" value="${e.duration || ''}" />
+              <span class="metric-unit">minutes</span>
+            </div>
+            <div class="metric-field">
+              <span class="metric-label">Calories burned</span>
+              <input class="metric-input" type="number" id="cal-${k}" min="0" max="9999" placeholder="e.g. 450" value="${e.calories || ''}" />
+              <span class="metric-unit">kcal</span>
+            </div>
+          </div>
+          <textarea class="note-input" id="note-${k}" placeholder="Add notes — what you actually did, how it felt, what to adjust next time…" rows="2">${e.note || ''}</textarea>
+          <div style="display:flex; align-items:center;">
+            <button class="save-btn" onclick="saveNote('${phase.id}',${wi},${s.di})">Save</button>
+            <span class="saved-flash" id="flash-${k}">Saved</span>
+          </div>
+        </div>`;
+      });
+
+      html += `</div></div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  main.innerHTML = html;
+  computeStats();
+}
+
+function toggleWeek(phaseId, wi) {
+  const card = document.getElementById(`wk-${phaseId}-${wi}`);
+  const open = card.classList.toggle('open');
+  localStorage.setItem(`week_open_${phaseId}_${wi}`, open);
+}
+
+function setStatus(phaseId, wi, di, status, btn) {
+  const e = getEntry(phaseId, wi, di);
+  e.status = status;
+  setEntry(phaseId, wi, di, e);
+
+  const parent = btn.closest('.status-row');
+  parent.querySelectorAll('.status-btn').forEach(b => {
+    b.className = 'status-btn';
+  });
+  const cls = { done:'sel-done', skipped:'sel-skipped', failed:'sel-failed', planned:'sel-planned' };
+  btn.classList.add(cls[status]);
+
+  const wkCard = document.getElementById(`wk-${phaseId}-${wi}`);
+  const phase = PHASES.find(p => p.id === phaseId);
+  const days = phase.days(wi);
+  const dots = wkCard.querySelectorAll('.day-status-dot');
+  days.forEach((_, idx) => {
+    const e2 = getEntry(phaseId, wi, idx);
+    dots[idx].className = 'day-status-dot ' + dotClass(e2.status);
+  });
+
+  computeStats();
+}
+
+function saveNote(phaseId, wi, di) {
+  const k = `${phaseId}_${wi}_${di}`;
+  const e = getEntry(phaseId, wi, di);
+  e.note = document.getElementById(`note-${k}`).value;
+  const durEl = document.getElementById(`dur-${k}`);
+  const calEl = document.getElementById(`cal-${k}`);
+  e.duration = durEl ? (parseInt(durEl.value) || '') : (e.duration || '');
+  e.calories = calEl ? (parseInt(calEl.value) || '') : (e.calories || '');
+  setEntry(phaseId, wi, di, e);
+  const flash = document.getElementById(`flash-${k}`);
+  flash.style.opacity = '1';
+  setTimeout(() => flash.style.opacity = '0', 1500);
+  computeStats();
+}
+
+document.getElementById('days-to-race').textContent = daysToRace().toLocaleString();
+
+renderNav();
+renderPhase();
+</script>
+</body>
+</html>
